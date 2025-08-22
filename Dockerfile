@@ -1,8 +1,8 @@
 # Define Mosquitto version, see also .github/workflows/build_and_push_docker_images.yml for
 # the automatically built images
-ARG MOSQUITTO_VERSION=2.0.18
+ARG MOSQUITTO_VERSION=2.0.22
 # Define libwebsocket version
-ARG LWS_VERSION=4.2.2
+ARG LWS_VERSION=4.3.6
 
 # Use debian:stable-slim as a builder for Mosquitto and dependencies.
 FROM debian:stable-slim as mosquitto_builder
