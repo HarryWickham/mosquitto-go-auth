@@ -1,16 +1,9 @@
-# Archived
-
-08/06/2025: I haven't used this plugin in almost 6 years nor have followed Mosquitto's changes in some time now.
-The plugin works perfectly fine at the moment but that might stop being true in time, so I'm archiving the project to make clear there will be no more changes to it.
-Thanks to everyone that had kinds words and appreciated the project.
-
 # Mosquitto Go Auth
 
 Mosquitto Go Auth is an authentication and authorization plugin for the Mosquitto MQTT broker.
 The name is terrible, I know, but it's too late to change it. And, you know: naming, cache invalidation, off-by-one errors and whatnot.
 
-
-### Intro
+## Intro
 
 This is an authentication and authorization plugin for [mosquitto](https://mosquitto.org/), a well known open source MQTT broker.
 It's written (almost) entirely in Go: it uses `cgo` to expose mosquitto's auth plugin needed functions, but internally just calls Go to get everything done.
@@ -19,87 +12,115 @@ It is greatly inspired in [jpmens'](https://github.com/jpmens) [mosquitto-auth-p
 
 These are the backends that this plugin implements right now:
 
-* Files
-* PostgreSQL
-* JWT (with local DB or remote API)
-* HTTP
-* Redis
-* Mysql
-* SQLite3
-* MongoDB
-* LDAP
-* Custom (experimental)
-* gRPC
-* Javascript interpreter
+- Files
+- PostgreSQL
+- JWT (with local DB or remote API)
+- HTTP
+- Redis
+- Mysql
+- SQLite3
+- MongoDB
+- LDAP
+- Custom (experimental)
+- gRPC
+- Javascript interpreter
 
 **Every backend offers user, superuser and acl checks, and include proper tests.**
 
 Please open an issue with the `feature` or `enhancement` tag to request new backends or additions to existing ones.
 
-
 ### Table of contents
 
 <!-- MarkdownTOC -->
 
-- [Requirements](#requirements)
-- [Build](#build)
-- [Configuration](#configuration)
-   - [General options](#general-options)
-   - [Cache](#cache)
-   - [Hashing](#hashing)
-   - [Log level](#log-level)
-   - [Prefixes](#prefixes)
-   - [Backend options](#backend-options)
+- [Mosquitto Go Auth](#mosquitto-go-auth)
+  - [Intro](#intro)
+    - [Table of contents](#table-of-contents)
+    - [Requirements](#requirements)
+    - [Build](#build)
+      - [Building the plugin](#building-the-plugin)
+      - [Raspberry Pi](#raspberry-pi)
+        - [Openssl and websockets notes](#openssl-and-websockets-notes)
+    - [Configuration](#configuration)
+      - [Backends order](#backends-order)
+      - [Using clientid as username](#using-clientid-as-username)
+      - [Cache](#cache)
+      - [Hashing](#hashing)
+        - [PBKDF2](#pbkdf2)
+        - [Bcrypt](#bcrypt)
+        - [Argon2ID](#argon2id)
+      - [Logging](#logging)
+      - [Retry](#retry)
+      - [Prefixes](#prefixes)
+      - [Superuser checks](#superuser-checks)
+      - [ACL access values](#acl-access-values)
+      - [Backend options](#backend-options)
+      - [Testing](#testing)
     - [Registering checks](#registering-checks)
-- [Files](#files)
-   - [Passwords file](#passwords-file)
-   - [ACL file](#acl-file)
-   - [Testing Files](#testing-files)
-- [PostgreSQL](#postgresql)
-   - [Testing Postgres](#testing-postgres)
-- [Mysql](#mysql)
-   - [Testing Mysql](#testing-mysql)
-- [SQLite3](#sqlite3)
-   - [Testing SQLite3](#testing-sqlite3)
-- [JWT](#jwt)
-   - [Remote mode](#remote-mode)
-   - [Local mode](#local-mode)
-   - [JS mode](#js-mode)
-   - [Testing JWT](#testing-jwt)
-- [HTTP](#http)
-   - [Response mode](#response-mode)
-   - [Params mode](#params-mode)
-   - [Testing HTTP](#testing-http)
-- [Redis](#redis)
-   - [Testing Redis](#testing-redis)
-- [MongoDB](#mongodb)
-   - [Testing MongoDB](#testing-mongodb)
-- [LDAP](#ldap)
-- [Custom \(experimental\)](#custom-experimental)
-   - [Testing Custom](#testing-custom)
-- [gRPC](#grpc)
-   - [Service](#service)
-   - [Testing gRPC](#testing-grpc)
-- [Javascript](#javascript)
-   - [Testing Javascript](#testing-javascript)
-- [Using with LoRa Server](#using-with-lora-server)
-- [Docker](#docker)
-   - [Prebuilt images](#prebuilt-images)
-   - [Building images](#building-images)
-- [License](#license)
+    - [Files](#files)
+      - [Passwords file](#passwords-file)
+      - [ACL file](#acl-file)
+      - [Testing Files](#testing-files)
+    - [PostgreSQL](#postgresql)
+      - [Password hashing](#password-hashing)
+      - [Testing Postgres](#testing-postgres)
+    - [Mysql](#mysql)
+      - [Password hashing](#password-hashing-1)
+      - [Testing Mysql](#testing-mysql)
+    - [SQLite3](#sqlite3)
+      - [Password hashing](#password-hashing-2)
+      - [Testing SQLite3](#testing-sqlite3)
+    - [JWT](#jwt)
+      - [Remote mode](#remote-mode)
+        - [Response mode](#response-mode)
+        - [Params mode](#params-mode)
+      - [Local mode](#local-mode)
+      - [JS mode](#js-mode)
+      - [Files mode](#files-mode)
+      - [Password hashing](#password-hashing-3)
+      - [Prefixes](#prefixes-1)
+      - [Testing JWT](#testing-jwt)
+    - [HTTP](#http)
+      - [Response mode](#response-mode-1)
+      - [Params mode](#params-mode-1)
+      - [Testing HTTP](#testing-http)
+    - [Redis](#redis)
+      - [Cluster](#cluster)
+      - [Password hashing](#password-hashing-4)
+      - [Testing Redis](#testing-redis)
+      - [Testing Redis Cluster](#testing-redis-cluster)
+    - [MongoDB](#mongodb)
+      - [Password hashing](#password-hashing-5)
+      - [Testing MongoDB](#testing-mongodb)
+    - [LDAP](#ldap)
+    - [Custom](#custom)
+      - [Testing Custom](#testing-custom)
+    - [gRPC](#grpc)
+      - [Service](#service)
+      - [Testing gRPC](#testing-grpc)
+    - [Javascript](#javascript)
+      - [Password hashing](#password-hashing-6)
+      - [Testing Javascript](#testing-javascript)
+    - [Using with LoRa Server](#using-with-lora-server)
+    - [Docker](#docker)
+      - [Support and issues](#support-and-issues)
+      - [Prebuilt images](#prebuilt-images)
+      - [Building images](#building-images)
+      - [Step-by-step guide:](#step-by-step-guide)
+      - [Base Image](#base-image)
+      - [Mosquitto version](#mosquitto-version)
+    - [Testing using Docker](#testing-using-docker)
+    - [License](#license)
 
 <!-- /MarkdownTOC -->
-
-
 
 ### Requirements
 
 This package uses `Go modules` to manage dependencies.
 As it interacts with `mosquitto`, it makes use of `cgo`. Also, it (optionally) uses Redis for cache purposes.
 
-*Important*: as of 23/05/2025, or May 23, 2025, I've switched Go cache backing package to https://github.com/jellydator/ttlcache, which makes use of generics.
+_Important_: as of 23/05/2025, or May 23, 2025, I've switched Go cache backing package to https://github.com/jellydator/ttlcache, which makes use of generics.
 Following this change, I've bumped Go version to 1.24.3 and might explore opportunities to refactor code using additions since the last set version in this lib which was 1.18.
-
 
 ### Build
 
@@ -110,6 +131,7 @@ First, install dependencies (tested on Debian 9 and later, Linux Mint 18, 19 and
 `sudo apt-get install libwebsockets8 libwebsockets-dev libc-ares2 libc-ares-dev openssl uuid uuid-dev`
 
 Newer Mosquitto versions also depend on `cJson` for their dynamic-security plugin, so you should either install the deps or compile Mosquitto without it by changing `WITCH_CJSON` var at `config.mk` when building:
+
 ```
 sudo apt-get install libcjson1 libcjson-dev
 ```
@@ -180,9 +202,9 @@ make
 This assumes that `mosquitto.h`, `mosquitto_plugin.h` and `mosquitto_broker.h` are located at `/usr/include` or `/usr/local/include`
 on MacOS or debian-based systems (and probably other linux systems too).
 
-On debian-based systems you can install the header files via apt (```apt install mosquitto-dev libmosquitto-dev```). They will be placed under `/usr/include`.
+On debian-based systems you can install the header files via apt (`apt install mosquitto-dev libmosquitto-dev`). They will be placed under `/usr/include`.
 
-On MacOS you can install the header files via homebrew (```brew install mosquitto```). MacOS on ARM hardware will place the header
+On MacOS you can install the header files via homebrew (`brew install mosquitto`). MacOS on ARM hardware will place the header
 files under `/opt/homebrew/include` and on x86_64 (Intel) hardware under `/usr/local/homebrew/include`. You have to either copy these headers under `/usr/local/include`,
 create a symlink or configure `make` to include homebrew's include path too.
 
@@ -208,9 +230,7 @@ sudo tar -C /usr/local -xzf go1.10.1.linux-armv6l.tar.gz
 
 Add Go to your path at .profile:
 
-`
-export PATH=$PATH:/usr/local/go/bin:~/go/bin
-`
+`export PATH=$PATH:/usr/local/go/bin:~/go/bin`
 
 Source the file (`source ~/.profile`) and check Go was correctly installed (`go version`).
 
@@ -266,16 +286,16 @@ Set all other plugin options below in the same file.
 By default, the plugin won't establish any order for checks (Go maps guarantee no order).
 In particular and importantly, when running ACL checks with `superuser` checks enabled,
 the plugin will first check them all for `superuser` and then check ACLs for all of them,
-*in any given order* as mentioned.
+_in any given order_ as mentioned.
 
 You can override this behaviour by setting `exhaust_backend_first` option to `true`:
+
 ```
 auth_opt_exhaust_backend_first true
 ```
 
-When set, ACL checks will first try to check for `superuser` (if possible and enabled) in the backend, 
+When set, ACL checks will first try to check for `superuser` (if possible and enabled) in the backend,
 and then run an ACL check against the same backend before moving to the next one.
-
 
 #### Using clientid as username
 
@@ -499,7 +519,7 @@ If you're using prior versions then `MOSQ_ACL_SUBSCRIBE` is not available and yo
 
 #### Backend options
 
-Any other options with a leading ```auth_opt_``` are handed to the plugin and used by the backends.
+Any other options with a leading `auth_opt_` are handed to the plugin and used by the backends.
 Individual backends have their options described in the sections below.
 
 #### Testing
@@ -605,12 +625,12 @@ Proper test files are provided in the repo (see test-files dir) and are needed i
 
 ### PostgreSQL
 
-The `postgres`  backend allows to specify queries for user, superuser and acl checks to be tested against your schema.
+The `postgres` backend allows to specify queries for user, superuser and acl checks to be tested against your schema.
 
 Supported options for `postgres` are:
 
 | Option                    | default     | Mandatory | Meaning                                |
-|---------------------------|-------------|:---------:|----------------------------------------|
+| ------------------------- | ----------- | :-------: | -------------------------------------- |
 | auth_opt_pg_host          | localhost   |           | hostname/address                       |
 | auth_opt_pg_port          | 5432        |           | TCP port                               |
 | auth_opt_pg_user          |             |     Y     | username                               |
@@ -628,50 +648,48 @@ Supported options for `postgres` are:
 
 Depending on the sslmode given, sslcert, sslkey and sslrootcert will be used. Options for sslmode are:
 
-   disable - No SSL
-   require - Always SSL (skip verification)
-   verify-ca - Always SSL (verify that the certificate presented by the server was signed by a trusted CA)
-   verify-full - Always SSL (verify that the certification presented by the server was signed by a trusted CA and the server host name matches the one in the certificate)
+disable - No SSL
+require - Always SSL (skip verification)
+verify-ca - Always SSL (verify that the certificate presented by the server was signed by a trusted CA)
+verify-full - Always SSL (verify that the certification presented by the server was signed by a trusted CA and the server host name matches the one in the certificate)
 
-From *mosquitto go auth* version 2.0.0 on `verify-full` will be the default sslmode instead of `disable`. You may have
+From _mosquitto go auth_ version 2.0.0 on `verify-full` will be the default sslmode instead of `disable`. You may have
 to disable transport layer security if the postgres database server doesn't support encryption and has a certificate
 signed by a trusted CA.
 
 Queries work pretty much the same as in jpmen's plugin, so here's his discription (with some little changes) about them:
 
-   The SQL query for looking up a user's password hash is mandatory. The query
-   MUST return a single row only (any other number of rows is considered to be
-   "user not found"), and it MUST return a single column only with the PBKDF2
-   password hash. A single `'$1'` in the query string is replaced by the
-   username attempting to access the broker.
+The SQL query for looking up a user's password hash is mandatory. The query
+MUST return a single row only (any other number of rows is considered to be
+"user not found"), and it MUST return a single column only with the PBKDF2
+password hash. A single `'$1'` in the query string is replaced by the
+username attempting to access the broker.
 
-   SELECT pass FROM account WHERE username = $1 limit 1
+SELECT pass FROM account WHERE username = $1 limit 1
 
+The SQL query for checking whether a user is a _superuser_ - and thus
+circumventing ACL checks - is optional. If it is specified, the query MUST
+return a single row with a single value: 0 is false and 1 is true.
+A single `'$1`' in the query string is replaced by the
+username attempting to access the broker. The following example uses the
+same `users` table, but it could just as well reference a distinct table
+or view.
 
-   The SQL query for checking whether a user is a _superuser_ - and thus
-   circumventing ACL checks - is optional. If it is specified, the query MUST
-   return a single row with a single value: 0 is false and 1 is true.
-   A single `'$1`' in the query string is replaced by the
-   username attempting to access the broker. The following example uses the
-   same `users` table, but it could just as well reference a distinct table
-   or view.
+SELECT COUNT(\*) FROM account WHERE username = $1 AND super = 1
 
-   SELECT COUNT(*) FROM account WHERE username = $1 AND super = 1
+The SQL query for checking ACLs is optional, but if it is specified, the
+`postgres` backend can try to limit access to particular topics or topic branches
+depending on the value of a database table. The query MAY return zero or more
+rows for a particular user, each returning EXACTLY one column containing a
+topic (wildcards are supported). A single `'$1`' in the query string is
+replaced by the username attempting to access the broker, and a single `'$2`' is
+replaced with the integer value `1` signifying a read-only access attempt
+(SUB) or `2` signifying a read-write access attempt (PUB).
 
-   The SQL query for checking ACLs is optional, but if it is specified, the
-   `postgres` backend can try to limit access to particular topics or topic branches
-   depending on the value of a database table. The query MAY return zero or more
-   rows for a particular user, each returning EXACTLY one column containing a
-   topic (wildcards are supported). A single `'$1`' in the query string is
-   replaced by the username attempting to access the broker, and a single `'$2`' is
-   replaced with the integer value `1` signifying a read-only access attempt
-   (SUB) or `2` signifying a read-write access attempt (PUB).
+In the following example, the table has a column `rw` containing 1 for
+readonly topics, 2 for writeonly topics and 3 for readwrite topics:
 
-   In the following example, the table has a column `rw` containing 1 for
-   readonly topics, 2 for writeonly topics and 3 for readwrite topics:
-
-   SELECT topic FROM acl WHERE (username = $1) AND rw = $2
-
+SELECT topic FROM acl WHERE (username = $1) AND rw = $2
 
 When option pg_superquery is not present, Superuser check will always return false, hence there'll be no superusers.
 
@@ -749,26 +767,25 @@ Also, default host `localhost` and port `3306` will be used if none are given.
 
 Supported options for `mysql` are:
 
-| Option                                | default   | Mandatory | Meaning                                  |
-| ------------------------------------- | --------- | :-------: | -----------------------------------------|
-| auth_opt_mysql_host                   | localhost |    N      | hostname/address                         |
-| auth_opt_mysql_port                   |   3306    |    N      | TCP port                                 |
-| auth_opt_mysql_user                   |           |    Y      | username                                 |
-| auth_opt_mysql_password               |           |    Y      | password                                 |
-| auth_opt_mysql_dbname                 |           |    Y      | database name                            |
-| auth_opt_mysql_userquery              |           |    Y      | SQL for users                            |
-| auth_opt_mysql_superquery             |           |    N      | SQL for superusers                       |
-| auth_opt_mysql_aclquery               |           |    N      | SQL for ACLs                             |
-| auth_opt_mysql_sslmode                |  disable  |    N      | SSL/TLS mode.                            |
-| auth_opt_mysql_sslcert                |           |    N      | SSL/TLS Client Cert.                     |
-| auth_opt_mysql_sslkey                 |           |    N      | SSL/TLS Client Cert. Key                 |
-| auth_opt_mysql_sslrootcert            |           |    N      | SSL/TLS Root Cert                        |
-| auth_opt_mysql_protocol               |    tcp    |    N      | Connection protocol (tcp or unix)        |
-| auth_opt_mysql_socket                 |           |    N      | Unix socket path                         |
-| auth_opt_mysql_connect_tries          |    -1     |    N      | x < 0: try forever, x > 0: try x times   |
-| auth_opt_mysql_max_life_time          |           |    N      | connection max life time on seconds      |
-| auth_opt_mysql_allow_native_passwords |   false   |    N      | To allow native passwords                |
-
+| Option                                | default   | Mandatory | Meaning                                |
+| ------------------------------------- | --------- | :-------: | -------------------------------------- |
+| auth_opt_mysql_host                   | localhost |     N     | hostname/address                       |
+| auth_opt_mysql_port                   | 3306      |     N     | TCP port                               |
+| auth_opt_mysql_user                   |           |     Y     | username                               |
+| auth_opt_mysql_password               |           |     Y     | password                               |
+| auth_opt_mysql_dbname                 |           |     Y     | database name                          |
+| auth_opt_mysql_userquery              |           |     Y     | SQL for users                          |
+| auth_opt_mysql_superquery             |           |     N     | SQL for superusers                     |
+| auth_opt_mysql_aclquery               |           |     N     | SQL for ACLs                           |
+| auth_opt_mysql_sslmode                | disable   |     N     | SSL/TLS mode.                          |
+| auth_opt_mysql_sslcert                |           |     N     | SSL/TLS Client Cert.                   |
+| auth_opt_mysql_sslkey                 |           |     N     | SSL/TLS Client Cert. Key               |
+| auth_opt_mysql_sslrootcert            |           |     N     | SSL/TLS Root Cert                      |
+| auth_opt_mysql_protocol               | tcp       |     N     | Connection protocol (tcp or unix)      |
+| auth_opt_mysql_socket                 |           |     N     | Unix socket path                       |
+| auth_opt_mysql_connect_tries          | -1        |     N     | x < 0: try forever, x > 0: try x times |
+| auth_opt_mysql_max_life_time          |           |     N     | connection max life time on seconds    |
+| auth_opt_mysql_allow_native_passwords | false     |     N     | To allow native passwords              |
 
 Finally, placeholders for mysql differ from those of postgres, changing from $1, $2, etc., to simply ?. These are some **example** queries for `mysql`:
 
@@ -834,20 +851,18 @@ ON UPDATE CASCADE
 );
 ```
 
-
-
 ### SQLite3
 
 The `sqlite` backend works in the same way as `postgres` and `mysql` do, except that being a light weight db, it has fewer configuration options.
 
-| Option                          | default   | Mandatory | Meaning                                  |
-| ------------------------------- | --------- | :-------: | ---------------------------------------- |
-| auth_opt_sqlite_source          |           |    Y      | SQLite3 source                           |
-| auth_opt_sqlite_userquery       |           |    Y      | SQL for users                            |
-| auth_opt_sqlite_superquery      |           |    N      | SQL for superusers                       |
-| auth_opt_sqlite_aclquery        |           |    N      | SQL for ACLs                             |
-| auth_opt_sqlite_connect_tries   |    -1     |    N      | x < 0: try forever, x > 0: try x times   |
-| auth_opt_sqlite_max_life_time   |           |    N      | connection max life time in seconds      |
+| Option                        | default | Mandatory | Meaning                                |
+| ----------------------------- | ------- | :-------: | -------------------------------------- |
+| auth_opt_sqlite_source        |         |     Y     | SQLite3 source                         |
+| auth_opt_sqlite_userquery     |         |     Y     | SQL for users                          |
+| auth_opt_sqlite_superquery    |         |     N     | SQL for superusers                     |
+| auth_opt_sqlite_aclquery      |         |     N     | SQL for ACLs                           |
+| auth_opt_sqlite_connect_tries | -1      |     N     | x < 0: try forever, x > 0: try x times |
+| auth_opt_sqlite_max_life_time |         |     N     | connection max life time in seconds    |
 
 SQLite3 allows to connect to an in-memory db, or a single file one, so source maybe `memory` (not :memory:) or the path to a file db.
 
@@ -887,11 +902,11 @@ The `jwt` backend is for auth with a JWT remote API, a local DB, a JavaScript VM
 | Option                            | default   | Mandatory | Meaning                                                 |
 | --------------------------------- | --------- | :-------: | ------------------------------------------------------- |
 | auth_opt_jwt_mode                 |           |     Y     | local, remote, js, files                                |
-| auth_opt_jwt_parse_token          |   false   |     N     | Parse token in remote/js modes                          |
+| auth_opt_jwt_parse_token          | false     |     N     | Parse token in remote/js modes                          |
 | auth_opt_jwt_secret               |           |    Y/N    | JWT secret, required for local mode, optional otherwise |
 | auth_opt_jwt_userfield            |           |     N     | When `Username`, expect `username` as part of claims    |
-| auth_opt_jwt_skip_user_expiration |   false   |     N     | Skip token expiration in user/superuser checks          |
-| auth_opt_jwt_skip_acl_expiration  |   false   |     N     | Skip token expiration in ACL checks                     |
+| auth_opt_jwt_skip_user_expiration | false     |     N     | Skip token expiration in user/superuser checks          |
+| auth_opt_jwt_skip_acl_expiration  | false     |     N     | Skip token expiration in ACL checks                     |
 | auth_opt_jwt_user_agent           | mosquitto |     N     | User agent for requests                                 |
 
 #### Remote mode
@@ -902,7 +917,7 @@ The following options are supported by the `jwt` backend when remote is set to t
 | --------------------------- | --------- | :-------: | ------------------------------------------------------------- |
 | auth_opt_jwt_host           |           |    Y/N    | API server host name or ip                                    |
 | auth_opt_jwt_port           |           |     Y     | TCP port number                                               |
-| auth_opt_jwt_http_timeout   |     5     |     N     | Timeout in seconds for http client                            |
+| auth_opt_jwt_http_timeout   | 5         |     N     | Timeout in seconds for http client                            |
 | auth_opt_jwt_getuser_uri    |           |     Y     | URI for check username/password                               |
 | auth_opt_jwt_superuser_uri  |           |     N     | URI for check superuser                                       |
 | auth_opt_jwt_aclcheck_uri   |           |     Y     | URI for check acl                                             |
@@ -948,17 +963,17 @@ When params mode is set to `json`, the backend will send a json encoded string w
 
 ```json
 {
- "topic":    "mock/topic",
- "clientid": "mock_client",
- "acc": 1   // 1 is read, 2 is write, 3 is readwrite, 4 is subscribe
+  "topic": "mock/topic",
+  "clientid": "mock_client",
+  "acc": 1 // 1 is read, 2 is write, 3 is readwrite, 4 is subscribe
 }
 ```
 
 When set to `form`, it will send params like a regular html form post, so acc will be a string instead of an int.
 
-*Important*: Please note that when using JWT, username and password are not needed, so for user and superuser check the backend will send an empty string or empty form values. On the other hand, all three cases will set the "authorization" header with the jwt token, which mosquitto will pass to the plugin as the regular "username" param.
+_Important_: Please note that when using JWT, username and password are not needed, so for user and superuser check the backend will send an empty string or empty form values. On the other hand, all three cases will set the "authorization" header with the jwt token, which mosquitto will pass to the plugin as the regular "username" param.
 
-*Update: The username is expected to be set at the Subject field of the JWT claims (it was expected at Username earlier).*
+_Update: The username is expected to be set at the Subject field of the JWT claims (it was expected at Username earlier)._
 
 To clarify this, here's an example for connecting from a javascript frontend using the Paho MQTT js client (notice how the jwt token is set in userName and password has any string as it will not get checked):
 
@@ -1031,16 +1046,14 @@ auth_opt_jwt_userquery select count(*) from test_user where username = $1 limit 
 
 Thus, the following specific JWT local options are supported:
 
-
-| Option                  | default   | Mandatory | Meaning                                                  |
-| ----------------------- | --------- | :-------: | -------------------------------------------------------- |
-| auth_opt_jwt_db         |  postgres |     N     | The DB backend to be used, either `postgres` or `mysql`  |
-| auth_opt_jwt_userquery  |           |     Y     | SQL query for users                                      |
-
+| Option                 | default  | Mandatory | Meaning                                                 |
+| ---------------------- | -------- | :-------: | ------------------------------------------------------- |
+| auth_opt_jwt_db        | postgres |     N     | The DB backend to be used, either `postgres` or `mysql` |
+| auth_opt_jwt_userquery |          |     Y     | SQL query for users                                     |
 
 Notice that general `jwt_secret` is mandatory when using this mode.
 `jwt_userfield` is still optional and serves as a mean to extract the username from either the claim's `Subject` (`sub` field),
- or from the `username` field when `jwt_userfield` is set to `Username`
+or from the `username` field when `jwt_userfield` is set to `Username`
 
 As mentioned, only the `userquery` must not be prefixed by the underlying DB, and now expects an integer result instead of a password hash, as the JWT token needs no password checking.
 An example of a different query using either DB is given for the user query.
@@ -1057,25 +1070,24 @@ For mysql:
 auth_opt_jwt_userquery select count(*) from "user" where username = ? and is_active = true limit 1
 ```
 
-*Important note:*
+_Important note:_
 
 Since local JWT follows the underlying DB backend's way of working, both of these hold true:
 
 - When option jwt_superquery is not present, Superuser check will always return false, hence there'll be no superusers.
 - When option jwt_aclquery is not present, AclCheck will always return true, hence all authenticated users will be authorized to pub/sub to any topic.
 
-
 #### JS mode
 
 When set to `js` JWT will act in JS mode, which allows to run a JavaScript interpreter VM to conduct checks. Options for this mode are:
 
-| Option                                 | default   | Mandatory | Meaning                                             |
-| -------------------------------------- | --------- | :-------: | --------------------------------------------------- |
-| auth_opt_jwt_js_stack_depth_limit      |    32     |     N     | Max stack depth for the interpreter                 |
-| auth_opt_jwt_js_ms_max_duration        |    200    |     N     | Max execution time for a hceck in milliseconds      |
-| auth_opt_jwt_js_user_script_path       |           |     Y     | Relative or absolute path to user check script      |
-| auth_opt_jwt_js_superuser_script_path  |           |     Y     | Relative or absolute path to superuser check script |
-| auth_opt_jwt_js_acl_script_path        |           |     Y     | Relative or absolute path to ACL check script       |
+| Option                                | default | Mandatory | Meaning                                             |
+| ------------------------------------- | ------- | :-------: | --------------------------------------------------- |
+| auth_opt_jwt_js_stack_depth_limit     | 32      |     N     | Max stack depth for the interpreter                 |
+| auth_opt_jwt_js_ms_max_duration       | 200     |     N     | Max execution time for a hceck in milliseconds      |
+| auth_opt_jwt_js_user_script_path      |         |     Y     | Relative or absolute path to user check script      |
+| auth_opt_jwt_js_superuser_script_path |         |     Y     | Relative or absolute path to superuser check script |
+| auth_opt_jwt_js_acl_script_path       |         |     Y     | Relative or absolute path to ACL check script       |
 
 This mode expects the user to define JS scripts that return a boolean result to the check in question.
 
@@ -1121,10 +1133,9 @@ These ACLs follow the exact same syntax and semantics as those from the [Files](
 
 Options for this mode are:
 
-| Option                        | default   | Mandatory | Meaning           |
-| ----------------------------- | --------- | :-------: | ----------------- |
-| auth_opt_jwt_files_acl_path   |           |     Y     | Path to ACL files |
-
+| Option                      | default | Mandatory | Meaning           |
+| --------------------------- | ------- | :-------: | ----------------- |
+| auth_opt_jwt_files_acl_path |         |     Y     | Path to ACL files |
 
 Notice there's no `passwords` file option since usernames come from parsing the JWT token and no password check is required.
 Thus, you should be careful about general ACL rules and prefer to explicitly set rules for each valid user.
@@ -1186,21 +1197,25 @@ When response mode is set to `text`, the backend expects the URIs to return a st
 When params mode is set to `json`, the backend will send a json encoded string with the relevant data. Here are examples:
 
 For user authentication:
+
 ```json
 {
- "username": "user",
- "password": "pass",
- "clientid": "clientid"
+  "username": "user",
+  "password": "pass",
+  "clientid": "clientid"
 }
 ```
+
 For super user:
+
 ```json
 {
- "username": "user"
+  "username": "user"
 }
 ```
 
 For ACL check:
+
 ```json
 {
   "username": "user",
@@ -1232,16 +1247,15 @@ For common rules, SETS with KEYS "common:sacls", "common:racls", "common:wacls" 
 
 Finally, options for Redis are the following:
 
-| Option                            | default   | Mandatory | Meaning                              |
-| --------------------------------- | --------- | :-------: | ------------------------------------ |
-| auth_opt_redis_host               | localhost |     N     | IP address,will skip dns lookup      |
-| auth_opt_redis_port               | 6379      |     N     | TCP port number                      |
-| auth_opt_redis_db                 | 2         |     N     | Redis DB number                      |
-| auth_opt_redis_password           |           |     N     | Redis DB password                    |
-| auth_opt_redis_disable_superuser  | true      |     N     | Disable query to check for superuser |
-| auth_opt_redis_mode               |           |     N     | See `Cluster` section below          |
-| auth_opt_redis_cluster_addresses  |           |     N     | See `Cluster` section below          |
-
+| Option                           | default   | Mandatory | Meaning                              |
+| -------------------------------- | --------- | :-------: | ------------------------------------ |
+| auth_opt_redis_host              | localhost |     N     | IP address,will skip dns lookup      |
+| auth_opt_redis_port              | 6379      |     N     | TCP port number                      |
+| auth_opt_redis_db                | 2         |     N     | Redis DB number                      |
+| auth_opt_redis_password          |           |     N     | Redis DB password                    |
+| auth_opt_redis_disable_superuser | true      |     N     | Disable query to check for superuser |
+| auth_opt_redis_mode              |           |     N     | See `Cluster` section below          |
+| auth_opt_redis_cluster_addresses |           |     N     | See `Cluster` section below          |
 
 #### Cluster
 
@@ -1254,7 +1268,7 @@ For instructions on how to set a backend specific hasher or use the general one,
 
 #### Testing Redis
 
-In order to test the Redis backend, the plugin needs to be able to connect to a redis server located at localhost, on port 6379, without using password and that a database named 2  exists (to avoid messing with the commonly used 0 and 1).
+In order to test the Redis backend, the plugin needs to be able to connect to a redis server located at localhost, on port 6379, without using password and that a database named 2 exists (to avoid messing with the commonly used 0 and 1).
 
 All these requirements are met with a fresh installation of Redis without any custom configurations (at least when building or installing from the distro's repos in Debian based systems, and probably in other distros too).
 
@@ -1269,7 +1283,6 @@ requirepass go_auth_test
 #### Testing Redis Cluster
 
 To test a Redis Cluster the plugin expects that there's a cluster with 3 masters at `localhost:7000`, `localhost:7001` and `localhost:7002`. The easiest way to achieve this is just running some dockerized cluster such as https://github.com/Grokzen/docker-redis-cluster, which I used to test that the cluster mode is working, but building a local cluster should work just fine. I know that this test is pretty bad, and so are the general testing expectations. I'm looking to replace the whole suite with a proper dockerized environment that can also run automatic tests on pushes to ensure any changes are safe, but that will take some time.
-
 
 ### MongoDB
 
@@ -1308,21 +1321,19 @@ Example acls:
 
 Options for `mongo` are the following:
 
-
-| Option                               | default      | Mandatory | Meaning                              |
-| ------------------------------------ | ------------ | :-------: | ------------------------------------ |
-| auth_opt_mongo_host                  | localhost    |     N     | IP address,will skip dns lookup      |
-| auth_opt_mongo_port                  | 27017        |     N     | TCP port number                      |
-| auth_opt_mongo_dbname                | mosquitto    |     N     | MongoDB DB name                      |
-| auth_opt_mongo_authsource            | ""           |     N     | MongoDB authsource DB name           |
-| auth_opt_mongo_username              | ""           |     N     | MongoDB username                     |
-| auth_opt_mongo_password              | ""           |     N     | MongoDB password                     |
-| auth_opt_mongo_users                 | users        |     N     | User collection                      |
-| auth_opt_mongo_acls                  | acls         |     N     | ACL collection                       |
-| auth_opt_mongo_disable_superuser     | true         |     N     | Disable query to check for superuser |
-| auth_opt_mongo_use_tls              | false        |     N     | Connect with TLS                     |
-| auth_opt_mongo_insecure_skip_verify  | false        |     N     | Verify server's certificate chain    |
-
+| Option                              | default   | Mandatory | Meaning                              |
+| ----------------------------------- | --------- | :-------: | ------------------------------------ |
+| auth_opt_mongo_host                 | localhost |     N     | IP address,will skip dns lookup      |
+| auth_opt_mongo_port                 | 27017     |     N     | TCP port number                      |
+| auth_opt_mongo_dbname               | mosquitto |     N     | MongoDB DB name                      |
+| auth_opt_mongo_authsource           | ""        |     N     | MongoDB authsource DB name           |
+| auth_opt_mongo_username             | ""        |     N     | MongoDB username                     |
+| auth_opt_mongo_password             | ""        |     N     | MongoDB password                     |
+| auth_opt_mongo_users                | users     |     N     | User collection                      |
+| auth_opt_mongo_acls                 | acls      |     N     | ACL collection                       |
+| auth_opt_mongo_disable_superuser    | true      |     N     | Disable query to check for superuser |
+| auth_opt_mongo_use_tls              | false     |     N     | Connect with TLS                     |
+| auth_opt_mongo_insecure_skip_verify | false     |     N     | Verify server's certificate chain    |
 
 If you experience any problem connecting to a replica set, please refer to [this issue](https://github.com/iegomez/mosquitto-go-auth/issues/32).
 
@@ -1345,7 +1356,6 @@ If you wish to test Mongo's auth, you'll need to run mongo with the `--auth` fla
    //authOpts["mongo_password"] = "go_auth_test"
 ```
 
-
 ### LDAP
 
 The `ldap` backend allows to query an LDAP or Active Directory Server.
@@ -1354,12 +1364,11 @@ Using the cache feature helps with slow LDAP servers, but be careful with the ca
 
 Options for `ldap` are the following:
 
-
 | Option                                    | default              | Mandatory | Meaning                                                            |
-|-------------------------------------------|----------------------|:---------:|--------------------------------------------------------------------|
+| ----------------------------------------- | -------------------- | :-------: | ------------------------------------------------------------------ |
 | auth_opt_ldap_url                         | ldap://localhost:389 |     N     | LDAP Server URL                                                    |
 | auth_opt_ldap_user_dn                     |                      |     Y     | LDAP User DN                                                       |
-| auth_opt_ldap_group_dn                    |                      |     N     | LDAP Group DN, Required for acl checks                        |
+| auth_opt_ldap_group_dn                    |                      |     N     | LDAP Group DN, Required for acl checks                             |
 | auth_opt_ldap_bind_dn                     |                      |     Y     | LDAP Bind DN                                                       |
 | auth_opt_ldap_bind_password               |                      |     Y     | LDAP Bind Password                                                 |
 | auth_opt_ldap_user_filter                 |                      |     Y     | LDAP User Filter, `%s` will be a placeholder for the username      |
@@ -1368,9 +1377,7 @@ Options for `ldap` are the following:
 | auth_opt_ldap_acl_topic_pattern_attribute | ""                   |     N     | LDAP Attribute containing topic patterns                           |
 | auth_opt_ldap_acl_acc_attribute           | ""                   |     N     | LDAP Attribute containing the access level                         |
 
-
 Default Config for `ldap` with [lldap](https://github.com/lldap/lldap):
-
 
 ```
 auth_opt_ldap_url ldap://lldap:3890
@@ -1383,7 +1390,6 @@ auth_opt_ldap_superuser_filter (&(uid=%s)(objectClass=person)(memberOf=mqtt_supe
 auth_opt_ldap_acl_topic_pattern_attribute mqtt_topic_pattern
 auth_opt_ldap_acl_acc_attribute mqtt_topic_acc
 ```
-
 
 ### Custom
 
@@ -1445,24 +1451,22 @@ Check the plugin directory for dummy example and makefile.
 
 As this option is custom written by yourself, there are no tests included in the project.
 
-
 ### gRPC
 
 The `grpc` backend allows to check for user auth, superuser and acls against a gRPC service.
 
 The following options are supported:
 
-
-| Option                             | default   | Mandatory | Meaning                        |
-| ---------------------------------- | --------- | :-------: | ------------------------------ |
-| auth_opt_grpc_host                 |           |     Y     | gRPC server hostname           |
-| auth_opt_grpc_port                 |           |     Y     | gRPC server port number        |
-| auth_opt_grpc_ca_cert              |           |     N     | gRPC server CA cert path       |
-| auth_opt_grpc_tls_cert             |           |     N     | gRPC client TLS cert path      |
-| auth_opt_grpc_tls_key              |           |     N     | gRPC client TLS key path       |
-| auth_opt_grpc_disable_superuser    |   false   |     N     | disable superuser checks       |
-| auth_opt_grpc_fail_on_dial_error   |   false   |     N     | fail to init on dial error     |
-| auth_opt_grpc_dial_timeout_ms      |   500     |     N     | dial timeout in ms             |
+| Option                           | default | Mandatory | Meaning                    |
+| -------------------------------- | ------- | :-------: | -------------------------- |
+| auth_opt_grpc_host               |         |     Y     | gRPC server hostname       |
+| auth_opt_grpc_port               |         |     Y     | gRPC server port number    |
+| auth_opt_grpc_ca_cert            |         |     N     | gRPC server CA cert path   |
+| auth_opt_grpc_tls_cert           |         |     N     | gRPC client TLS cert path  |
+| auth_opt_grpc_tls_key            |         |     N     | gRPC client TLS key path   |
+| auth_opt_grpc_disable_superuser  | false   |     N     | disable superuser checks   |
+| auth_opt_grpc_fail_on_dial_error | false   |     N     | fail to init on dial error |
+| auth_opt_grpc_dial_timeout_ms    | 500     |     N     | dial timeout in ms         |
 
 The last one, `grpc_fail_on_dial_error` indicates if failing to dial the service on initialization should be
 treated as a fatal error, or it should only be logged and then an attempt to redial should be made on every
@@ -1549,69 +1553,74 @@ This backend has no special requirements as a gRPC server is mocked to test diff
 
 The `js` backend allows to run a [JavaScript interpreter VM](https://github.com/robertkrimen/otto) to conduct checks. Options for this mode are:
 
-| Option                            | default   | Mandatory | Meaning                                                   |
-| ----------------------------------| --------- | :-------: | --------------------------------------------------------- |
-| auth_opt_js_stack_depth_limit     |    32     |     N     | Max stack depth for the interpreter                       |
-| auth_opt_js_ms_max_duration       |    200    |     N     | Max execution time for a hceck in milliseconds            |
-| auth_opt_js_user_script_path      |           |     Y     | Relative or absolute path to user check script            |
-| auth_opt_js_superuser_script_path |           |     Y     | Relative or absolute path to superuser check script       |
-| auth_opt_js_acl_script_path       |           |     Y     | Relative or absolute path to ACL check script             |
-| auth_opt_js_pass_claims           |   false   |     N     | Pass all claims extracted from the token to check scripts |
+| Option                            | default | Mandatory | Meaning                                                   |
+| --------------------------------- | ------- | :-------: | --------------------------------------------------------- |
+| auth_opt_js_stack_depth_limit     | 32      |     N     | Max stack depth for the interpreter                       |
+| auth_opt_js_ms_max_duration       | 200     |     N     | Max execution time for a hceck in milliseconds            |
+| auth_opt_js_user_script_path      |         |     Y     | Relative or absolute path to user check script            |
+| auth_opt_js_superuser_script_path |         |     Y     | Relative or absolute path to superuser check script       |
+| auth_opt_js_acl_script_path       |         |     Y     | Relative or absolute path to ACL check script             |
+| auth_opt_js_pass_claims           | false   |     N     | Pass all claims extracted from the token to check scripts |
 
 This backend expects the user to define JS scripts that return a boolean result to the check in question.
 
 The backend will pass `mosquitto` provided arguments along, that is:
+
 - `username`, `password` and `clientid` for `user` checks.
 - `username` for `superuser` checks.
 - `username`, `topic`, `clientid` and `acc` for `ACL` checks.
-If `js_pass_claims` option is set, an additional argument `claims` containing the claims data extracted
-from the JWT token is passed to all checks.
+  If `js_pass_claims` option is set, an additional argument `claims` containing the claims data extracted
+  from the JWT token is passed to all checks.
 
 These are a valid, albeit pretty useless, example scripts for user, superuser and ACL checks (see `test-files/js`):
 
 For user authentication:
+
 ```javascript
 function checkUser(username, password, clientid) {
-    if(username == "correct" && password == "good") {
-        return true;
-    }
-    return false;
+  if (username == "correct" && password == "good") {
+    return true;
+  }
+  return false;
 }
 
 checkUser(username, password, clientid);
 ```
+
 For super user:
+
 ```javascript
 function checkSuperuser(username) {
-    if(username == "admin") {
-        return true;
-    }
-    return false;
+  if (username == "admin") {
+    return true;
+  }
+  return false;
 }
 
 checkSuperuser(username);
 ```
 
 For ACL check:
+
 ```javascript
 function checkAcl(username, topic, clientid, acc) {
-    if(username != "correct") {
-        return false;
-    }
+  if (username != "correct") {
+    return false;
+  }
 
-    if(topic != "test/topic") {
-        return false;
-    }
+  if (topic != "test/topic") {
+    return false;
+  }
 
-    if(clientid != "id") {
-        return false;
-    }
+  if (clientid != "id") {
+    return false;
+  }
 
-    if(acc != 1) {
-        return false;
-    }
+  if (acc != 1) {
+    return false;
+  }
 
-    return true;
+  return true;
 }
 
 checkAcl(username, topic, clientid, acc);
@@ -1644,7 +1653,7 @@ To run the latest image, use the following command and replace `/conf` with the 
 `docker run -it -p 1884:1884 -p 1883:1883 -v /conf:/etc/mosquitto iegomez/mosquitto-go-auth`
 
 You should also add the neccesary configuration to your .conf and update the path of the shared object:
-```auth_plugin /mosquitto/go-auth.so```
+`auth_plugin /mosquitto/go-auth.so`
 
 #### Building images
 
@@ -1653,42 +1662,48 @@ This project provides a Dockerfile for building a Docker container that contains
 Building containers is only supported on x86_64/AMD64 machines with multi-arch build support via [Docker Buildx](https://docs.docker.com/buildx/working-with-buildx).
 This allows building containers for x86_64/AMD64, ARMv6, ARMv7 and ARM64 on a single x86_64/AMD64 machine. For further instructions regarding Buildx, please refer to its documentation ond Docker's website.
 
-
 #### Step-by-step guide:
-* clone this repository: `git clone https://github.com/iegomez/mosquitto-go-auth.git`
-* change into the project folder `cd mosquitto-go-auth`
-* build containers for your desired architectures: `docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 .`
+
+- clone this repository: `git clone https://github.com/iegomez/mosquitto-go-auth.git`
+- change into the project folder `cd mosquitto-go-auth`
+- build containers for your desired architectures: `docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 .`
 
 #### Base Image
+
 Since there are several issues with using `alpine` based images we are using `debian:stable-slim` for both our build and final image. The final image size is about 60 MB.
 
 Documented issues:
+
 - https://github.com/iegomez/mosquitto-go-auth/issues/14
 - https://github.com/iegomez/mosquitto-go-auth/issues/15
 - https://github.com/iegomez/mosquitto-go-auth/issues/20
 
 #### Mosquitto version
+
 The Dockerfile compiles `mosquitto` using the source code from the version specified by `MOSQUITTO_VERSION`.
 
->Mosquitto released versions can be found at https://mosquitto.org/files/source/
+> Mosquitto released versions can be found at https://mosquitto.org/files/source/
 
 ### Testing using Docker
 
 Since tests require multiple backends (PostgreSQL, Mysql, Redis...), a Dockerfile.test provide
 and image with all required backend.
 To use it:
+
 ```
 docker build -t mosquitto-go-auth.test -f Dockerfile.runtest .
 docker run --rm -ti mosquitto-go-auth.test ./run-test-in-docker.sh
 ```
 
 Or using local source (avoid the need to rebuild image):
+
 ```
 docker run -v $(pwd):/app --rm -ti mosquitto-go-auth.test ./run-test-in-docker.sh
 ```
 
 You may even specify the command to run after backends are started, which allow
 to run only some tests or even get a shell inside the containers:
+
 ```
 docker run -v $(pwd):/app --rm -ti mosquitto-go-auth.test ./run-test-in-docker.sh make test-backends
 
