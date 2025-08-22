@@ -1320,7 +1320,7 @@ Options for `mongo` are the following:
 | auth_opt_mongo_users                 | users        |     N     | User collection                      |
 | auth_opt_mongo_acls                  | acls         |     N     | ACL collection                       |
 | auth_opt_mongo_disable_superuser     | true         |     N     | Disable query to check for superuser |
-| auth_opt_mongo_with_tls              | false        |     N     | Connect with TLS                     |
+| auth_opt_mongo_use_tls              | false        |     N     | Connect with TLS                     |
 | auth_opt_mongo_insecure_skip_verify  | false        |     N     | Verify server's certificate chain    |
 
 
